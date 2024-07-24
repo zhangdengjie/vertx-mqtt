@@ -16,6 +16,7 @@
 
 package io.vertx.mqtt.impl;
 
+import com.xixi.MqttClientStatusCallback;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerContext;
@@ -145,6 +146,12 @@ public class MqttClientImpl implements MqttClient {
 
   private NetClient client;
   private Status status = Status.CLOSED;
+
+  private MqttClientStatusCallback outListener;
+
+  public void setOutListener(MqttClientStatusCallback outListener) {
+    this.outListener = outListener;
+  }
 
   /**
    * Constructor
@@ -733,11 +740,17 @@ public class MqttClientImpl implements MqttClient {
       io.netty.handler.codec.mqtt.MqttMessage pingreq = MqttMessageFactory.newMessage(fixedHeader, null, null);
 
       long id = vertx.setTimer(keepAliveTimeout, _id -> {
+        if (outListener != null) {
+          outListener.onPingResponseOutTime();
+        }
         disconnect();
       });
 
       pings.add(new Ping(id));
 
+      if (outListener != null) {
+        outListener.onPing();
+      }
       this.write(pingreq);
     });
     return this;
